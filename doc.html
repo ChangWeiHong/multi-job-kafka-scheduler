@@ -1,0 +1,864 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Multi-Job Kafka Scheduler Learning Plan</title>
+  <style>
+    :root {
+      --bg: #f6f7f9;
+      --paper: #ffffff;
+      --text: #1f2937;
+      --muted: #5f6b7a;
+      --line: #d8dee8;
+      --code-bg: #101827;
+      --code-text: #e5edf6;
+      --blue: #2563eb;
+      --green: #15803d;
+      --amber: #b45309;
+      --red: #b91c1c;
+      --purple: #7c3aed;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      line-height: 1.6;
+    }
+
+    .page {
+      width: min(1080px, calc(100% - 32px));
+      margin: 0 auto;
+      padding: 32px 0 64px;
+    }
+
+    header {
+      padding: 32px 0 24px;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .eyebrow {
+      margin: 0 0 8px;
+      color: var(--blue);
+      font-size: 13px;
+      font-weight: 700;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+    }
+
+    h1,
+    h2,
+    h3 {
+      margin: 0;
+      line-height: 1.2;
+      letter-spacing: 0;
+    }
+
+    h1 {
+      max-width: 820px;
+      font-size: clamp(34px, 6vw, 54px);
+    }
+
+    h2 {
+      padding-top: 40px;
+      font-size: clamp(24px, 4vw, 32px);
+    }
+
+    h3 {
+      font-size: 18px;
+    }
+
+    p {
+      margin: 12px 0 0;
+      color: var(--muted);
+    }
+
+    a {
+      color: var(--blue);
+    }
+
+    code,
+    pre {
+      font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+    }
+
+    code {
+      padding: 2px 5px;
+      border-radius: 4px;
+      background: #eef2f7;
+      color: #111827;
+      font-size: 0.95em;
+    }
+
+    pre {
+      margin: 16px 0 0;
+      padding: 16px;
+      overflow-x: auto;
+      border-radius: 8px;
+      background: var(--code-bg);
+      color: var(--code-text);
+      font-size: 14px;
+      line-height: 1.5;
+    }
+
+    pre code {
+      padding: 0;
+      background: transparent;
+      color: inherit;
+      font-size: inherit;
+    }
+
+    section {
+      padding-bottom: 8px;
+      border-bottom: 1px solid var(--line);
+    }
+
+    ul,
+    ol {
+      margin: 12px 0 0;
+      padding-left: 22px;
+      color: var(--muted);
+    }
+
+    li + li {
+      margin-top: 6px;
+    }
+
+    .summary {
+      max-width: 860px;
+      font-size: 18px;
+    }
+
+    .note {
+      margin-top: 18px;
+      padding: 14px 16px;
+      border: 1px solid var(--line);
+      border-left: 4px solid var(--blue);
+      border-radius: 8px;
+      background: var(--paper);
+    }
+
+    .note strong {
+      color: var(--text);
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 14px;
+      margin-top: 18px;
+    }
+
+    .item {
+      min-width: 0;
+      padding: 16px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--paper);
+    }
+
+    .item p {
+      font-size: 14px;
+    }
+
+    .tag {
+      display: inline-flex;
+      align-items: center;
+      min-height: 24px;
+      margin-bottom: 10px;
+      padding: 3px 8px;
+      border-radius: 999px;
+      color: #ffffff;
+      font-size: 12px;
+      font-weight: 700;
+      line-height: 1;
+    }
+
+    .tag.blue { background: var(--blue); }
+    .tag.green { background: var(--green); }
+    .tag.amber { background: var(--amber); }
+    .tag.red { background: var(--red); }
+    .tag.purple { background: var(--purple); }
+
+    .diagram {
+      display: grid;
+      grid-template-columns: 1fr 42px 1fr 42px 1fr;
+      gap: 10px;
+      align-items: center;
+      margin-top: 18px;
+    }
+
+    .box {
+      min-height: 132px;
+      padding: 16px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--paper);
+    }
+
+    .arrow {
+      color: var(--blue);
+      font-size: 22px;
+      font-weight: 800;
+      text-align: center;
+    }
+
+    table {
+      width: 100%;
+      margin-top: 16px;
+      border: 1px solid var(--line);
+      border-collapse: collapse;
+      background: var(--paper);
+      font-size: 14px;
+    }
+
+    th,
+    td {
+      padding: 12px;
+      border-bottom: 1px solid var(--line);
+      border-right: 1px solid var(--line);
+      text-align: left;
+      vertical-align: top;
+    }
+
+    th {
+      color: var(--text);
+      background: #eef2f7;
+    }
+
+    td {
+      color: var(--muted);
+    }
+
+    tr:last-child td {
+      border-bottom: 0;
+    }
+
+    th:last-child,
+    td:last-child {
+      border-right: 0;
+    }
+
+    .two-col {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+      margin-top: 18px;
+    }
+
+    .timeline {
+      display: grid;
+      gap: 12px;
+      margin-top: 18px;
+      counter-reset: milestone;
+    }
+
+    .step {
+      display: grid;
+      grid-template-columns: 40px 1fr;
+      gap: 12px;
+      padding: 16px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--paper);
+    }
+
+    .step::before {
+      counter-increment: milestone;
+      content: counter(milestone);
+      display: grid;
+      place-items: center;
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      background: #e0ebff;
+      color: var(--blue);
+      font-weight: 800;
+    }
+
+    .footer {
+      padding: 28px 0 0;
+      border-bottom: 0;
+    }
+
+    @media (max-width: 860px) {
+      .grid,
+      .two-col,
+      .diagram {
+        grid-template-columns: 1fr;
+      }
+
+      .arrow {
+        transform: rotate(90deg);
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <header>
+      <p class="eyebrow">Learning doc / simplest useful version</p>
+      <h1>Multi-Job Kafka Scheduler</h1>
+      <p class="summary">
+        Build a small NestJS service that stores jobs in Postgres, publishes due work to Kafka,
+        runs fake workers for different job types, retries failures, and records execution history.
+        The first version should teach the moving parts without pretending to be a production platform.
+      </p>
+      <div class="note">
+        <strong>Default decision:</strong> keep API, scheduler, Kafka producer, and workers in one NestJS app for the first build.
+        After the flow works locally, workers can be split into separate processes without changing the data model.
+      </div>
+    </header>
+
+    <section>
+      <h2>What We Are Building</h2>
+      <div class="grid">
+        <div class="item">
+          <span class="tag blue">API</span>
+          <h3>Create and inspect jobs</h3>
+          <p>Users create email, billing, report, or export jobs. They can query current status and execution history.</p>
+        </div>
+        <div class="item">
+          <span class="tag green">Postgres</span>
+          <h3>Source of truth</h3>
+          <p>Jobs, attempts, retry state, and history live in the database. Kafka is not the database.</p>
+        </div>
+        <div class="item">
+          <span class="tag amber">Kafka</span>
+          <h3>Delivery pipe</h3>
+          <p>The scheduler sends executable work to topic-per-job-type queues. Workers consume and update Postgres.</p>
+        </div>
+      </div>
+
+      <div class="note">
+        <strong>Learning constraint:</strong> fake the job handlers. Email can log a message, billing can sleep for a second,
+        report can generate a fake result, and export can write a fake URL. The important lesson is orchestration.
+      </div>
+    </section>
+
+    <section>
+      <h2>Non-Goals For Version 1</h2>
+      <ul>
+        <li>No real email provider, payment provider, PDF generator, or file storage.</li>
+        <li>No cron parser at first. Use <code>recurrence_interval_seconds</code> so recurrence is easy to see.</li>
+        <li>No Kubernetes, distributed tracing, admin dashboard, or complex permissions.</li>
+        <li>No exactly-once promise. Kafka consumers are at-least-once, so handlers must tolerate duplicates.</li>
+      </ul>
+    </section>
+
+    <section>
+      <h2>Architecture</h2>
+      <div class="diagram" aria-label="Architecture diagram">
+        <div class="box">
+          <span class="tag blue">NestJS API</span>
+          <h3>HTTP endpoints</h3>
+          <p>Validate requests, create jobs, and read job history from Postgres.</p>
+        </div>
+        <div class="arrow">-&gt;</div>
+        <div class="box">
+          <span class="tag green">Postgres + Scheduler</span>
+          <h3>Durable scheduling</h3>
+          <p>Every 5 seconds, claim due jobs and create a queued execution attempt.</p>
+        </div>
+        <div class="arrow">-&gt;</div>
+        <div class="box">
+          <span class="tag amber">Kafka Workers</span>
+          <h3>Typed execution</h3>
+          <p>Consume topic-specific messages, run fake handlers, and update attempt results.</p>
+        </div>
+      </div>
+
+      <pre><code>Request flow:
+POST /jobs
+  -> insert row into jobs
+  -> scheduler sees next_run_at <= now()
+  -> scheduler creates job_executions row
+  -> scheduler publishes to Kafka topic
+  -> worker consumes message
+  -> worker updates job_executions and jobs
+
+Topic mapping:
+email   -> jobs.email
+billing -> jobs.billing
+report  -> jobs.report
+export  -> jobs.export</code></pre>
+    </section>
+
+    <section>
+      <h2>Implementation Choices</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>Part</th>
+            <th>Choice</th>
+            <th>Why this is simple</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Backend framework</td>
+            <td>NestJS</td>
+            <td>Clear modules for API, scheduler, Kafka, and handlers.</td>
+          </tr>
+          <tr>
+            <td>Database layer</td>
+            <td>Prisma</td>
+            <td>Readable schema and migrations without much boilerplate.</td>
+          </tr>
+          <tr>
+            <td>Kafka client</td>
+            <td>KafkaJS</td>
+            <td>Direct producer and consumer code, which is useful while learning Kafka behavior.</td>
+          </tr>
+          <tr>
+            <td>Local services</td>
+            <td>Docker Compose</td>
+            <td>One command starts Postgres and Kafka.</td>
+          </tr>
+          <tr>
+            <td>Recurring schedule</td>
+            <td>Interval seconds</td>
+            <td>Easier than cron and enough to prove recurring behavior.</td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section>
+      <h2>Recommended Project Shape</h2>
+      <p>
+        Use direct names that match the domain. This is easier to learn than hiding everything behind generic abstractions.
+      </p>
+      <pre><code>src/
+  app.module.ts
+  main.ts
+  jobs/
+    jobs.controller.ts
+    jobs.service.ts
+    jobs.repository.ts
+    job-types.ts
+    dto/
+      create-job.dto.ts
+  scheduler/
+    scheduler.service.ts
+  kafka/
+    kafka-producer.service.ts
+    kafka-worker.service.ts
+    topic-map.ts
+  handlers/
+    email.handler.ts
+    billing.handler.ts
+    report.handler.ts
+    export.handler.ts
+  prisma/
+    prisma.service.ts
+
+prisma/
+  schema.prisma
+
+docker-compose.yml</code></pre>
+    </section>
+
+    <section>
+      <h2>Data Model</h2>
+      <div class="two-col">
+        <div class="item">
+          <h3>jobs</h3>
+          <pre><code>id uuid primary key
+name text
+type enum(email, billing, report, export)
+payload jsonb
+status enum(scheduled, queued, running, completed, failed, cancelled)
+schedule_type enum(immediate, delayed, recurring)
+next_run_at timestamptz
+recurrence_interval_seconds integer nullable
+max_attempts integer default 3
+attempts_made integer default 0
+locked_until timestamptz nullable
+last_error text nullable
+created_at timestamptz
+updated_at timestamptz</code></pre>
+        </div>
+        <div class="item">
+          <h3>job_executions</h3>
+          <pre><code>id uuid primary key
+job_id uuid references jobs(id)
+status enum(queued, running, succeeded, failed)
+attempt integer
+topic text
+message_key text
+started_at timestamptz nullable
+completed_at timestamptz nullable
+error_message text nullable
+created_at timestamptz</code></pre>
+        </div>
+      </div>
+
+      <div class="note">
+        <strong>Simple lock rule:</strong> when the scheduler claims a job, set <code>status = queued</code> and
+        <code>locked_until = now() + interval '2 minutes'</code>. A later recovery step can return expired queued or running work to retry.
+      </div>
+    </section>
+
+    <section>
+      <h2>State Transitions</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>Flow</th>
+            <th>Transition</th>
+            <th>Meaning</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Normal one-off job</td>
+            <td><code>scheduled -&gt; queued -&gt; running -&gt; completed</code></td>
+            <td>The scheduler publishes the job, the worker succeeds, and no more runs are needed.</td>
+          </tr>
+          <tr>
+            <td>Retryable failure</td>
+            <td><code>scheduled -&gt; queued -&gt; running -&gt; scheduled</code></td>
+            <td>The worker fails, attempts remain, and the job receives a later <code>next_run_at</code>.</td>
+          </tr>
+          <tr>
+            <td>Permanent failure</td>
+            <td><code>scheduled -&gt; queued -&gt; running -&gt; failed</code></td>
+            <td>The worker fails and <code>max_attempts</code> has been reached.</td>
+          </tr>
+          <tr>
+            <td>Recurring success</td>
+            <td><code>scheduled -&gt; queued -&gt; running -&gt; scheduled</code></td>
+            <td>The worker succeeds and the job is scheduled again using its recurrence interval.</td>
+          </tr>
+          <tr>
+            <td>User cancellation</td>
+            <td><code>scheduled -&gt; cancelled</code></td>
+            <td>Optional for version 1. Cancel only jobs that have not started running.</td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section>
+      <h2>HTTP API</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>Endpoint</th>
+            <th>Purpose</th>
+            <th>Version 1 behavior</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><code>POST /jobs</code></td>
+            <td>Create a job.</td>
+            <td>Validate type and schedule fields, then insert into <code>jobs</code>.</td>
+          </tr>
+          <tr>
+            <td><code>GET /jobs</code></td>
+            <td>List recent jobs.</td>
+            <td>Return newest jobs with status, type, and next run time.</td>
+          </tr>
+          <tr>
+            <td><code>GET /jobs/:id</code></td>
+            <td>Inspect one job.</td>
+            <td>Return the job row and a short summary of latest execution.</td>
+          </tr>
+          <tr>
+            <td><code>GET /jobs/:id/executions</code></td>
+            <td>Inspect attempts.</td>
+            <td>Return all execution attempts ordered by attempt number.</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <pre><code>Example request:
+POST /jobs
+{
+  "name": "send welcome email",
+  "type": "email",
+  "payload": {
+    "to": "student@example.com",
+    "template": "welcome"
+  },
+  "scheduleType": "delayed",
+  "runAt": "2026-05-29T10:00:00.000Z",
+  "maxAttempts": 3
+}</code></pre>
+    </section>
+
+    <section>
+      <h2>Scheduler Algorithm</h2>
+      <p>
+        The scheduler is a small loop. It does not execute jobs. It only decides which jobs are due and publishes messages.
+      </p>
+      <pre><code>Every 5 seconds:
+  1. Find jobs where:
+       status = scheduled
+       next_run_at <= now()
+       locked_until is null or locked_until < now()
+
+  2. Claim a small batch in a database transaction.
+       Preferred Postgres pattern:
+       SELECT ... FOR UPDATE SKIP LOCKED
+
+  3. For each claimed job:
+       attempt = attempts_made + 1
+       create job_executions row with status queued
+       update jobs set status queued, attempts_made = attempt
+       publish Kafka message with job_id, execution_id, attempt
+
+  4. If Kafka publish fails:
+       mark the execution failed
+       return the job to scheduled or failed depending on attempts</code></pre>
+    </section>
+
+    <section>
+      <h2>Kafka Message Contract</h2>
+      <p>
+        Keep the message small. The database owns the full job payload, but including the payload in version 1 makes debugging easier.
+      </p>
+      <pre><code>{
+  "jobId": "9d9c0b68-2fd7-4b76-8f5a-36942775bb26",
+  "executionId": "af20fc60-0bf2-45c9-9a20-b5fe86526c52",
+  "type": "email",
+  "attempt": 1,
+  "payload": {
+    "to": "student@example.com",
+    "template": "welcome"
+  }
+}</code></pre>
+
+      <ul>
+        <li>Message key: <code>executionId</code> for attempt-level ordering and duplicate detection.</li>
+        <li>Topic: choose from <code>type</code> using one explicit map.</li>
+        <li>Consumer group: one group per worker type, for example <code>email-workers</code>.</li>
+      </ul>
+    </section>
+
+    <section>
+      <h2>Worker Algorithm</h2>
+      <pre><code>When a Kafka message arrives:
+  1. Load job_executions by execution_id.
+  2. If execution is already succeeded or failed, acknowledge and stop.
+  3. Mark execution running and job running.
+  4. Run the fake handler for the job type.
+  5. On success:
+       mark execution succeeded
+       if recurring, set job status scheduled and calculate next_run_at
+       otherwise set job status completed
+  6. On failure:
+       mark execution failed with error_message
+       if attempts_made < max_attempts, set job status scheduled with backoff next_run_at
+       otherwise set job status failed</code></pre>
+
+      <div class="note">
+        <strong>Kafka acknowledgement rule:</strong> commit the Kafka offset only after Postgres has been updated.
+        If the worker crashes before commit, Kafka may redeliver the message. That is expected.
+      </div>
+    </section>
+
+    <section>
+      <h2>Retry And Recurrence Rules</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>Case</th>
+            <th>Rule</th>
+            <th>Simple formula</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>First failure</td>
+            <td>Schedule another attempt if attempts remain.</td>
+            <td><code>next_run_at = now() + 10 seconds</code></td>
+          </tr>
+          <tr>
+            <td>Repeated failure</td>
+            <td>Use small exponential backoff for learning.</td>
+            <td><code>delay = 10 * 2^(attempt - 1)</code></td>
+          </tr>
+          <tr>
+            <td>Max attempts reached</td>
+            <td>Stop retrying and keep the error visible.</td>
+            <td><code>status = failed</code></td>
+          </tr>
+          <tr>
+            <td>Recurring success</td>
+            <td>Schedule the next run after a successful attempt.</td>
+            <td><code>next_run_at = now() + recurrence_interval_seconds</code></td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section>
+      <h2>Idempotency Rules</h2>
+      <ul>
+        <li>Treat <code>executionId</code> as the idempotency key for the worker.</li>
+        <li>If an execution is already terminal, do not run the handler again.</li>
+        <li>Make fake handlers deterministic enough to test. For example, fail when payload has <code>{"forceFail": true}</code>.</li>
+        <li>Do not update job status from memory. Reload the job row before deciding retry or completion state.</li>
+      </ul>
+    </section>
+
+    <section>
+      <h2>Build Milestones</h2>
+      <div class="timeline">
+        <div class="step">
+          <div>
+            <h3>Local infrastructure</h3>
+            <p>Create <code>docker-compose.yml</code> for Postgres and Kafka. Add a NestJS health endpoint.</p>
+          </div>
+        </div>
+        <div class="step">
+          <div>
+            <h3>Database and job API</h3>
+            <p>Add Prisma schema, migrations, <code>POST /jobs</code>, <code>GET /jobs</code>, and <code>GET /jobs/:id</code>.</p>
+          </div>
+        </div>
+        <div class="step">
+          <div>
+            <h3>Scheduler without Kafka</h3>
+            <p>Make the scheduler claim due jobs and write execution rows. Log what would be published.</p>
+          </div>
+        </div>
+        <div class="step">
+          <div>
+            <h3>Kafka producer and one worker</h3>
+            <p>Publish email jobs to <code>jobs.email</code>. Run one consumer and update execution history.</p>
+          </div>
+        </div>
+        <div class="step">
+          <div>
+            <h3>Multiple job types</h3>
+            <p>Add billing, report, and export handlers. Keep topic selection in one map.</p>
+          </div>
+        </div>
+        <div class="step">
+          <div>
+            <h3>Retries and recurrence</h3>
+            <p>Add deterministic failure, backoff, max attempts, and interval-based recurring jobs.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section>
+      <h2>Manual Test Script</h2>
+      <pre><code># 1. Start infrastructure
+docker compose up -d
+
+# 2. Start the app
+npm run start:dev
+
+# 3. Create an immediate email job
+curl -X POST http://localhost:3000/jobs \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "welcome email",
+    "type": "email",
+    "payload": { "to": "student@example.com" },
+    "scheduleType": "immediate",
+    "maxAttempts": 3
+  }'
+
+# 4. Watch the job move:
+# scheduled -> queued -> running -> completed
+curl http://localhost:3000/jobs
+
+# 5. Inspect attempts
+curl http://localhost:3000/jobs/JOB_ID/executions</code></pre>
+    </section>
+
+    <section>
+      <h2>Acceptance Checklist</h2>
+      <ul>
+        <li>A delayed job does not publish before <code>next_run_at</code>.</li>
+        <li>An immediate job gets published by the next scheduler tick.</li>
+        <li>Each job type publishes to the expected Kafka topic.</li>
+        <li>A successful worker writes a succeeded execution row and updates the job status.</li>
+        <li>A forced failure creates failed execution rows and retries until <code>max_attempts</code>.</li>
+        <li>A duplicate Kafka message does not run a completed execution again.</li>
+        <li>A recurring job schedules its next run after success.</li>
+        <li><code>GET /jobs/:id/executions</code> shows every attempt in order.</li>
+      </ul>
+    </section>
+
+    <section>
+      <h2>Interview Talking Points</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>Topic</th>
+            <th>What to say</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Why Postgres and Kafka?</td>
+            <td>Postgres is durable state. Kafka is scalable delivery. This avoids losing jobs when workers are down.</td>
+          </tr>
+          <tr>
+            <td>Why at-least-once?</td>
+            <td>Kafka may redeliver messages after crashes, so the worker checks execution state before doing work.</td>
+          </tr>
+          <tr>
+            <td>How to scale?</td>
+            <td>Run more consumers in each topic's consumer group. Split job types by topic when workloads differ.</td>
+          </tr>
+          <tr>
+            <td>How to prevent duplicate scheduling?</td>
+            <td>Claim due jobs inside a database transaction with row locks or an atomic status update.</td>
+          </tr>
+          <tr>
+            <td>What happens when Kafka publish fails?</td>
+            <td>The job remains recoverable in Postgres. The scheduler can retry publish or mark the attempt failed.</td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section>
+      <h2>Minimum Prompt For The Coding Agent</h2>
+      <pre><code>Build a local NestJS project called local-kafka-multi-job-scheduler.
+Use Docker Compose for PostgreSQL and Kafka.
+Use Prisma for the database layer and KafkaJS for Kafka.
+
+Implement the simplest useful version:
+- POST /jobs
+- GET /jobs
+- GET /jobs/:id
+- GET /jobs/:id/executions
+- job types: email, billing, report, export
+- scheduler loop every 5 seconds
+- Kafka topics: jobs.email, jobs.billing, jobs.report, jobs.export
+- fake handlers for each job type
+- execution history in job_executions
+- retries with max_attempts and exponential backoff
+- recurring jobs with recurrence_interval_seconds
+- duplicate message guard using execution_id
+
+Keep API, scheduler, producer, and consumers in one NestJS app first.
+Prioritize readable code over clever abstractions.</code></pre>
+    </section>
+
+    <section class="footer">
+      <h2>One Rule To Remember</h2>
+      <p>
+        Kafka moves work, but Postgres decides truth. If the service restarts, the database should still explain
+        what each job is, what happened to each attempt, and what should happen next.
+      </p>
+    </section>
+  </main>
+</body>
+</html>
