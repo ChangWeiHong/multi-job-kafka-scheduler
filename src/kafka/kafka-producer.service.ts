@@ -1,5 +1,5 @@
 import { Injectable, Logger, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
-import { Kafka, Producer } from 'kafkajs';
+import { Kafka, Partitioners, Producer } from 'kafkajs';
 
 import { JobMessage } from './job-message';
 import { JOB_TOPIC_BY_TYPE } from './topic-map';
@@ -49,24 +49,43 @@ export class KafkaProducerService implements OnModuleInit, OnModuleDestroy {
     });
   }
 
+  async ensureTopics() {
+    if (!this.enabled) {
+      return;
+    }
+
+    const admin = this.kafka.admin();
+    await admin.connect();
+    try {
+      const existingTopics = await admin.listTopics();
+      const missingTopics = Object.values(JOB_TOPIC_BY_TYPE).filter((topic) => !existingTopics.includes(topic));
+
+      if (missingTopics.length === 0) {
+        return;
+      }
+
+      await admin.createTopics({
+        waitForLeaders: true,
+        topics: missingTopics.map((topic) => ({
+          topic,
+          numPartitions: 1,
+          replicationFactor: 1,
+        })),
+      });
+    } finally {
+      await admin.disconnect();
+    }
+  }
+
   private async connectWithRetry() {
     let lastError: unknown;
 
     for (let attempt = 1; attempt <= 12; attempt += 1) {
       try {
-        const admin = this.kafka.admin();
-        await admin.connect();
-        await admin.createTopics({
-          waitForLeaders: true,
-          topics: Object.values(JOB_TOPIC_BY_TYPE).map((topic) => ({
-            topic,
-            numPartitions: 1,
-            replicationFactor: 1,
-          })),
+        await this.ensureTopics();
+        this.producer = this.kafka.producer({
+          createPartitioner: Partitioners.LegacyPartitioner,
         });
-        await admin.disconnect();
-
-        this.producer = this.kafka.producer();
         await this.producer.connect();
         this.logger.log('Kafka producer connected');
         return;

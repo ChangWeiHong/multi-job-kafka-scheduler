@@ -756,7 +756,9 @@ POST /jobs
     <section>
       <h2>Manual Test Script</h2>
       <pre><code># 1. Start infrastructure
-docker compose up -d
+docker-compose up -d
+# If your Docker install has the newer plugin:
+# docker compose up -d
 
 # 2. Start the app
 npm run start:dev

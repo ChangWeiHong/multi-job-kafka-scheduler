@@ -7,10 +7,13 @@ A local NestJS learning project that stores jobs in Postgres, publishes due work
 ```bash
 cp .env.example .env
 npm install
-docker compose up -d
+docker-compose up -d
 npm run prisma:deploy
 npm run start:dev
 ```
+
+If your Docker installation has the newer Compose plugin, `docker compose up -d` works too.
+Postgres is exposed on host port `15432` to avoid clashing with any existing local Postgres.
 
 In another terminal:
 

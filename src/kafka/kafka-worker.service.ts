@@ -9,6 +9,7 @@ import { ExportHandler } from '../handlers/export.handler';
 import { ReportHandler } from '../handlers/report.handler';
 import { PrismaService } from '../prisma/prisma.service';
 import { JobMessage } from './job-message';
+import { KafkaProducerService } from './kafka-producer.service';
 import { consumerGroupForType, JOB_TOPIC_BY_TYPE, topicForType } from './topic-map';
 
 @Injectable()
@@ -28,6 +29,7 @@ export class KafkaWorkerService implements OnModuleInit, OnModuleDestroy {
     private readonly billingHandler: BillingHandler,
     private readonly reportHandler: ReportHandler,
     private readonly exportHandler: ExportHandler,
+    private readonly producer: KafkaProducerService,
   ) {}
 
   async onModuleInit() {
@@ -36,13 +38,32 @@ export class KafkaWorkerService implements OnModuleInit, OnModuleDestroy {
       return;
     }
 
+    await this.producer.ensureTopics();
+
     for (const type of Object.keys(JOB_TOPIC_BY_TYPE) as JobType[]) {
-      await this.startConsumer(type);
+      await this.startConsumerWithRetry(type);
     }
   }
 
   async onModuleDestroy() {
     await Promise.all(this.consumers.map((consumer) => consumer.disconnect()));
+  }
+
+  private async startConsumerWithRetry(type: JobType) {
+    let lastError: unknown;
+
+    for (let attempt = 1; attempt <= 6; attempt += 1) {
+      try {
+        await this.startConsumer(type);
+        return;
+      } catch (error) {
+        lastError = error;
+        this.logger.warn(`Worker connection attempt ${attempt} failed for ${type}`);
+        await new Promise((resolve) => setTimeout(resolve, 3000));
+      }
+    }
+
+    throw lastError instanceof Error ? lastError : new Error(`Worker failed to connect for ${type}`);
   }
 
   private async startConsumer(type: JobType) {
