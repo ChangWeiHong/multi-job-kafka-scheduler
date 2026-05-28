@@ -1,0 +1,75 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum JobType {
+  email
+  billing
+  report
+  export
+}
+
+enum JobStatus {
+  scheduled
+  queued
+  running
+  completed
+  failed
+  cancelled
+}
+
+enum ScheduleType {
+  immediate
+  delayed
+  recurring
+}
+
+enum ExecutionStatus {
+  queued
+  running
+  succeeded
+  failed
+}
+
+model Job {
+  id                            String         @id @default(uuid()) @db.Uuid
+  name                          String
+  type                          JobType
+  payload                       Json
+  status                        JobStatus      @default(scheduled)
+  scheduleType                  ScheduleType   @map("schedule_type")
+  nextRunAt                     DateTime       @map("next_run_at") @db.Timestamptz(6)
+  recurrenceIntervalSeconds     Int?           @map("recurrence_interval_seconds")
+  maxAttempts                   Int            @default(3) @map("max_attempts")
+  attemptsMade                  Int            @default(0) @map("attempts_made")
+  lockedUntil                   DateTime?      @map("locked_until") @db.Timestamptz(6)
+  lastError                     String?        @map("last_error")
+  createdAt                     DateTime       @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt                     DateTime       @updatedAt @map("updated_at") @db.Timestamptz(6)
+  executions                    JobExecution[]
+
+  @@index([status, nextRunAt])
+  @@map("jobs")
+}
+
+model JobExecution {
+  id            String          @id @default(uuid()) @db.Uuid
+  jobId         String          @map("job_id") @db.Uuid
+  job           Job             @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  status        ExecutionStatus @default(queued)
+  attempt       Int
+  topic         String
+  messageKey    String          @map("message_key")
+  startedAt     DateTime?       @map("started_at") @db.Timestamptz(6)
+  completedAt   DateTime?       @map("completed_at") @db.Timestamptz(6)
+  errorMessage  String?         @map("error_message")
+  createdAt     DateTime        @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  @@index([jobId, attempt])
+  @@map("job_executions")
+}

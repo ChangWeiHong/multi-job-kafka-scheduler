@@ -1,0 +1,54 @@
+{
+  "name": "multi-job-kafka-scheduler",
+  "version": "0.1.0",
+  "private": true,
+  "description": "A local NestJS, Postgres, and Kafka learning project for multi-job scheduling.",
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "start": "node dist/main.js",
+    "start:dev": "tsx watch src/main.ts",
+    "dev": "npm run start:dev",
+    "test": "jest --runInBand",
+    "lint": "tsc -p tsconfig.json --noEmit",
+    "prisma:generate": "prisma generate",
+    "prisma:migrate": "prisma migrate dev",
+    "prisma:deploy": "prisma migrate deploy",
+    "smoke": "node scripts/smoke-test.mjs"
+  },
+  "dependencies": {
+    "@nestjs/common": "^11.0.0",
+    "@nestjs/core": "^11.0.0",
+    "@nestjs/platform-express": "^11.0.0",
+    "@nestjs/schedule": "^6.0.0",
+    "@prisma/client": "^6.0.0",
+    "class-transformer": "^0.5.1",
+    "class-validator": "^0.14.1",
+    "kafkajs": "^2.2.4",
+    "reflect-metadata": "^0.2.2",
+    "rxjs": "^7.8.1"
+  },
+  "devDependencies": {
+    "@nestjs/testing": "^11.0.0",
+    "@types/jest": "^30.0.0",
+    "@types/node": "^24.0.0",
+    "jest": "^30.0.0",
+    "prisma": "^6.0.0",
+    "ts-jest": "^29.2.5",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.2"
+  },
+  "jest": {
+    "preset": "ts-jest",
+    "testEnvironment": "node",
+    "roots": [
+      "<rootDir>/src",
+      "<rootDir>/test"
+    ],
+    "testRegex": ".*\\.spec\\.ts$",
+    "moduleFileExtensions": [
+      "js",
+      "json",
+      "ts"
+    ]
+  }
+}
